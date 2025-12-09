@@ -13,8 +13,8 @@ import {
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
 import logo from "../assets/Etribe-logo.jpg";
-// import api from "../api/axiosConfig";
-// import { getAuthHeaders } from "../utils/apiHeaders";
+import api from "../api/axiosConfig";
+import { getAuthHeaders } from "../utils/apiHeaders";
 import { toast } from "react-toastify";
 
 export default function JobList() {
@@ -86,62 +86,52 @@ export default function JobList() {
     { label: "Hospitality", count: 65, value: "hospitality" }
   ];
   
-  // Mock job data - replace with API call
-  const mockJobs = [
-    {
-      id: 1,
-      title: "Web Developer",
-      company: "Infosys",
-      description: "A bachelor's degree in Computer Science is required. Strong communication skills, team spirit, client call handling. A Web Developer is a professional who is responsible for the development....",
-      tags: ["Contract", "Remote", "Full Time", "0-1 years experience"],
-      location: "Delhi",
-      logo: "https://logo.clearbit.com/infosys.com",
-      postedTime: "19 hours ago"
-    },
-    {
-      id: 2,
-      title: "Web Developer",
-      company: "Concentrix",
-      description: "A bachelor's degree in Computer Science is required. Strong communication skills, team spirit, client call handling. A Web Developer is a professional who is responsible for the development....",
-      tags: ["Contract", "Remote", "Full Time", "0-1 years experience"],
-      location: "Delhi",
-      logo: "https://logo.clearbit.com/concentrix.com",
-      postedTime: "19 hours ago"
-    },
-    {
-      id: 3,
-      title: "iOS Developer",
-      company: "Nagarro",
-      description: "A bachelor's degree in Computer Science is required. Strong communication skills, team spirit, client call handling. A Web Developer is a professional who is responsible for the development....",
-      tags: ["Contract", "Remote", "Full Time", "0-1 years experience"],
-      location: "Delhi",
-      logo: "https://logo.clearbit.com/nagarro.com",
-      postedTime: "19 hours ago"
-    },
-    {
-      id: 4,
-      title: "Web Developer",
-      company: "Google",
-      description: "A bachelor's degree in Computer Science is required. Strong communication skills, team spirit, client call handling. A Web Developer is a professional who is responsible for the development....",
-      tags: ["Contract", "Remote", "Full Time", "0-1 years experience"],
-      location: "Delhi",
-      logo: "https://logo.clearbit.com/google.com",
-      postedTime: "19 hours ago"
+  // Helper function to format posted time
+  const formatPostedTime = (dateString) => {
+    try {
+      const jobDate = new Date(dateString);
+      const now = new Date();
+      const diffInMs = now - jobDate;
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+      const diffInWeeks = Math.floor(diffInDays / 7);
+      const diffInMonths = Math.floor(diffInDays / 30);
+      
+      if (diffInHours < 1) return "Just now";
+      if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+      if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+      if (diffInWeeks < 4) return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
+      return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+    } catch {
+      return "Recently posted";
     }
-  ];
+  };
   
   const loadJobs = async () => {
     setLoading(true);
     try {
-      // Replace with actual API call
-      // const response = await api.post('/Job_post/all_public', {}, {
-      //   headers: getAuthHeaders()
-      // });
-      // setJobs(response.data?.data || []);
+      const response = await api.post('/JobPortal/list_jobs', {}, {
+        headers: getAuthHeaders()
+      });
       
-      // Using mock data for now
-      setJobs(mockJobs);
-    } catch {
+      // Map API response to frontend structure
+      // The API wraps the array in an object: { status: true, data: [...] }
+      const apiJobs = Array.isArray(response.data?.data) ? response.data.data : [];
+      
+      const mappedJobs = apiJobs.map(job => ({
+        id: job.id,
+        title: job.job_type || "Not specified",
+        company: job.company_name || "Company",
+        description: job.job_description || "No description available",
+        tags: job.tags || ["Full Time"], // Keep tags field for backend to add later
+        location: job.location || "Location not specified", // Keep location field for backend to add later
+        logo: job.company_logo ? `https://api.etribes.mittalservices.com/${job.company_logo}` : null,
+        postedTime: job.dtime ? formatPostedTime(job.dtime) : "Recently posted"
+      }));
+      
+      setJobs(mappedJobs);
+    } catch (error) {
+      console.error("Error loading jobs:", error);
       toast.error("Failed to load jobs");
       setJobs([]);
     } finally {

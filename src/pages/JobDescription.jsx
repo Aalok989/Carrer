@@ -12,8 +12,8 @@ import {
   FiUsers
 } from "react-icons/fi";
 import logo from "../assets/Etribe-logo.jpg";
-// import api from "../api/axiosConfig";
-// import { getAuthHeaders } from "../utils/apiHeaders";
+import api from "../api/axiosConfig";
+import { getAuthHeaders } from "../utils/apiHeaders";
 import { toast } from "react-toastify";
 
 export default function JobDescription() {
@@ -39,117 +39,95 @@ export default function JobDescription() {
   const loadJobDetails = async () => {
     setLoading(true);
     try {
-      // Replace with actual API call
-      // const response = await api.get(`/Job_post/${id}`, {
-      //   headers: getAuthHeaders()
-      // });
-      // setJob(response.data?.data || response.data);
+      // Fetch all jobs and find the one with matching ID
+      const response = await api.post('/JobPortal/list_jobs', {}, {
+        headers: getAuthHeaders()
+      });
       
-      // Mock data for now
-      const mockJob = {
-        id: id || 1,
-        title: "Web Developer",
-        company: "Infosys",
-        location: "Delhi, India",
-        postedTime: "19 hours ago",
-        jobType: "Full Time",
-        experience: "0-1 years",
-        salary: "₹3,00,000 - ₹6,00,000",
-        description: `A bachelor's degree in Computer Science is required. Strong communication skills, team spirit, client call handling. A Web Developer is a professional who is responsible for the development and maintenance of web applications. They work with various technologies including HTML, CSS, JavaScript, and backend frameworks to create dynamic and interactive websites.`,
-        fullDescription: `We are looking for a skilled Web Developer to join our team. The ideal candidate will be responsible for developing and maintaining web applications, working with cross-functional teams, and ensuring high-quality code delivery.
-
-**Key Responsibilities:**
-- Develop and maintain web applications using modern technologies
-- Collaborate with designers and other developers to implement features
-- Write clean, maintainable, and efficient code
-- Debug and troubleshoot issues
-- Participate in code reviews
-- Stay updated with the latest web development trends
-
-**Requirements:**
-- Bachelor's degree in Computer Science or related field
-- Strong knowledge of HTML, CSS, and JavaScript
-- Experience with React, Vue, or Angular
-- Understanding of RESTful APIs
-- Good problem-solving skills
-- Strong communication skills
-
-**Benefits:**
-- Competitive salary package
-- Health insurance
-- Flexible working hours
-- Professional development opportunities
-- Friendly work environment`,
-        requirements: [
-          "Bachelor's degree in Computer Science",
-          "Strong communication skills",
-          "Team spirit and collaboration",
-          "Client call handling experience",
-          "Knowledge of modern web technologies"
-        ],
-        tags: ["Contract", "Remote", "Full Time", "0-1 years experience"],
-        logo: "https://logo.clearbit.com/infosys.com",
-        companyDescription: "Infosys is a global leader in next-generation digital services and consulting."
-      };
+      // The API wraps the array in an object: { status: true, data: [...] }
+      const apiJobs = Array.isArray(response.data?.data) ? response.data.data : [];
+      const jobData = apiJobs.find(job => job.id === id || job.id === parseInt(id));
       
-      setJob(mockJob);
+      if (jobData) {
+        // Map API response to frontend structure
+        const mappedJob = {
+          id: jobData.id,
+          title: jobData.job_type || "Not specified",
+          company: jobData.company_name || "Company",
+          location: jobData.location || "Location not specified", // Keep for backend to add later
+          postedTime: jobData.dtime ? formatPostedTime(jobData.dtime) : "Recently posted",
+          jobType: jobData.job_type_category || "Full Time", // Keep for backend to add later
+          experience: jobData.experience || "Not specified", // Keep for backend to add later
+          salary: jobData.salary || "Not specified", // Keep for backend to add later
+          description: jobData.job_description || "No description available",
+          fullDescription: jobData.full_description || jobData.job_description || "No detailed description available",
+          requirements: jobData.requirements || [
+            "Requirements will be updated soon"
+          ],
+          tags: jobData.tags || ["Full Time"], // Keep for backend to add later
+          logo: jobData.company_logo ? `https://api.etribes.mittalservices.com/${jobData.company_logo}` : null,
+          companyDescription: jobData.company_description || `${jobData.company_name || 'This company'} is looking for talented individuals to join their team.`
+        };
+        
+        setJob(mappedJob);
+      } else {
+        toast.error("Job not found");
+        navigate("/");
+      }
     } catch (err) {
+      console.error("Error loading job details:", err);
       toast.error("Failed to load job details");
       navigate("/");
     } finally {
       setLoading(false);
     }
   };
+  
+  // Helper function to format posted time
+  const formatPostedTime = (dateString) => {
+    try {
+      const jobDate = new Date(dateString);
+      const now = new Date();
+      const diffInMs = now - jobDate;
+      const diffInHours = Math.floor(diffInMs / (1000 * 60 * 60));
+      const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
+      const diffInWeeks = Math.floor(diffInDays / 7);
+      const diffInMonths = Math.floor(diffInDays / 30);
+      
+      if (diffInHours < 1) return "Just now";
+      if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+      if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
+      if (diffInWeeks < 4) return `${diffInWeeks} week${diffInWeeks > 1 ? 's' : ''} ago`;
+      return `${diffInMonths} month${diffInMonths > 1 ? 's' : ''} ago`;
+    } catch {
+      return "Recently posted";
+    }
+  };
 
   const loadSimilarJobs = async () => {
     try {
-      // Replace with actual API call
-      // const response = await api.get(`/Job_post/similar/${id}`, {
-      //   headers: getAuthHeaders()
-      // });
-      // setSimilarJobs(response.data?.data || []);
+      // Fetch all jobs and show other jobs as similar jobs
+      const response = await api.post('/JobPortal/list_jobs', {}, {
+        headers: getAuthHeaders()
+      });
       
-      // Mock similar jobs data
-      const mockSimilarJobs = [
-        {
-          id: 2,
-          title: "Frontend Developer",
-          company: "TCS",
-          location: "Mumbai",
-          postedTime: "2 days ago",
-          tags: ["Full Time", "Remote"],
-          logo: "https://logo.clearbit.com/tcs.com"
-        },
-        {
-          id: 3,
-          title: "React Developer",
-          company: "Wipro",
-          location: "Bangalore",
-          postedTime: "3 days ago",
-          tags: ["Contract", "On-site"],
-          logo: "https://logo.clearbit.com/wipro.com"
-        },
-        {
-          id: 4,
-          title: "Full Stack Developer",
-          company: "HCL",
-          location: "Chennai",
-          postedTime: "1 week ago",
-          tags: ["Full Time", "Hybrid"],
-          logo: "https://logo.clearbit.com/hcl.com"
-        },
-        {
-          id: 5,
-          title: "JavaScript Developer",
-          company: "Cognizant",
-          location: "Pune",
-          postedTime: "5 days ago",
-          tags: ["Full Time", "Remote"],
-          logo: "https://logo.clearbit.com/cognizant.com"
-        }
-      ];
+      // The API wraps the array in an object: { status: true, data: [...] }
+      const apiJobs = Array.isArray(response.data?.data) ? response.data.data : [];
+      // Filter out current job and map to similar jobs structure
+      const similarJobsList = apiJobs
+        .filter(job => job.id !== id && job.id !== parseInt(id))
+        .slice(0, 4) // Show only first 4 similar jobs
+        .map(job => ({
+          id: job.id,
+          title: job.job_type || "Not specified",
+          company: job.company_name || "Company",
+          location: job.location || "Location not specified",
+          postedTime: job.dtime ? formatPostedTime(job.dtime) : "Recently posted",
+          tags: job.tags || ["Full Time"],
+          logo: job.company_logo ? `https://api.etribes.mittalservices.com/${job.company_logo}` : null
+        }));
       
-      setSimilarJobs(mockSimilarJobs);
+      setSimilarJobs(similarJobsList);
     } catch (err) {
       console.error("Failed to load similar jobs:", err);
       setSimilarJobs([]);
@@ -166,14 +144,36 @@ export default function JobDescription() {
     toast.success(isSaved ? "Job removed from saved" : "Job saved successfully");
   };
 
-  const handleApply = () => {
+  const handleApply = async () => {
     if (!isLoggedIn) {
       toast.info("Please log in to apply for jobs");
       navigate("/login");
       return;
     }
-    // Implement apply logic
-    toast.success("Application submitted successfully!");
+    
+    try {
+      // Show loading toast
+      const loadingToast = toast.info("Submitting your application...", {
+        autoClose: false
+      });
+      
+      const response = await api.post(`/JobApplicant/submit_application/${id}`, {}, {
+        headers: getAuthHeaders()
+      });
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      if (response.data?.status === true || response.data?.success === true) {
+        toast.success(response.data?.message || "Application submitted successfully!");
+      } else {
+        toast.warning(response.data?.message || "Application submitted");
+      }
+    } catch (error) {
+      console.error("Error applying for job:", error);
+      const errorMessage = error.response?.data?.message || "Failed to submit application. Please try again.";
+      toast.error(errorMessage);
+    }
   };
 
   if (loading) {
