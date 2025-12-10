@@ -2,24 +2,30 @@ pipeline {
     agent any
 
     tools {
-        nodejs 'node'
+        // Updated to 'Node' to match your snippet. 
+        // Ensure "Node" is the exact name in Global Tool Configuration.
+        nodejs 'Node' 
     }
 
     environment {
-        SERVER_IP = '173.249.31.55'
-        DEPLOY_USER = 'ubuntu' 
+        // Uses the "Secret Text" credential for IP, matching your snippet
+        SERVER_IP = credentials('SERVER_IP') 
+        
+        // The user from your snippet
+        DEPLOY_USER = 'mukul'
+        
+        // The specific folder you set up in Apache
         TARGET_DIR = '/var/www/careers.etribes.bbills.win'
     }
 
     stages {
         stage('Clean Workspace') {
             steps {
-                // Wipes the Jenkins folder clean before starting to ensure no cache issues
-                cleanWs() 
+                cleanWs()
             }
         }
 
-        stage('Checkout') {
+        stage('Checkout Code') {
             steps {
                 checkout scm
             }
@@ -31,19 +37,32 @@ pipeline {
             }
         }
 
-        stage('Build') {
+        stage('Build Frontend') {
             steps {
+                // Vite builds to 'dist/' by default
                 sh 'npm run build'
             }
         }
 
-        stage('Deploy') {
+        stage('Deploy to Server') {
             steps {
-                sshagent(['deploy-ssh-key']) {
-                    // Added '--delete' flag here. 
-                    // This makes the server folder an EXACT mirror of the build folder.
-                    // WARNING: Be careful that TARGET_DIR is correct, or it will wipe the wrong folder!
-                    sh "rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' dist/ ${DEPLOY_USER}@${SERVER_IP}:${TARGET_DIR}"
+                // Uses the ID from your snippet
+                sshagent(credentials: ['vmi-ssh-key']) { 
+                    script {
+                        // 1. Ensure target directory exists on server
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'sudo mkdir -p ${TARGET_DIR}'"
+                        
+                        // 2. Fix permissions (Ensure 'mukul' owns the folder so rsync can write)
+                        // We also give group ownership to www-data (Apache)
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'sudo chown -R ${DEPLOY_USER}:www-data ${TARGET_DIR}'"
+
+                        // 3. Sync files
+                        // --delete ensures the server folder is an exact mirror of the build
+                        sh "rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' dist/ ${DEPLOY_USER}@${SERVER_IP}:${TARGET_DIR}"
+                        
+                        // 4. (Optional) Set permissions for Apache to read files
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'sudo chmod -R 755 ${TARGET_DIR}'"
+                    }
                 }
             }
         }
