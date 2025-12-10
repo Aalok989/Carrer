@@ -65,7 +65,7 @@ pipeline {
                         
                         // 2. Fix permissions (Ensure 'mukul' owns the folder so rsync can write)
                         // We also give group ownership to www-data (Apache)
-                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'chown -R ${DEPLOY_USER}:www-data ${TARGET_DIR}'"
+                        //sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'chown -R ${DEPLOY_USER}:www-data ${TARGET_DIR}'"
 
                         // 3. Sync files
                         // --delete ensures the server folder is an exact mirror of the build
