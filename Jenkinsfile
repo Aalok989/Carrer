@@ -50,18 +50,18 @@ pipeline {
                 sshagent(credentials: ['vmi-ssh-key']) { 
                     script {
                         // 1. Ensure target directory exists on server
-                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'sudo mkdir -p ${TARGET_DIR}'"
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'mkdir -p ${TARGET_DIR}'"
                         
                         // 2. Fix permissions (Ensure 'mukul' owns the folder so rsync can write)
                         // We also give group ownership to www-data (Apache)
-                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'sudo chown -R ${DEPLOY_USER}:www-data ${TARGET_DIR}'"
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'chown -R ${DEPLOY_USER}:www-data ${TARGET_DIR}'"
 
                         // 3. Sync files
                         // --delete ensures the server folder is an exact mirror of the build
                         sh "rsync -avz --delete -e 'ssh -o StrictHostKeyChecking=no' dist/ ${DEPLOY_USER}@${SERVER_IP}:${TARGET_DIR}"
                         
                         // 4. (Optional) Set permissions for Apache to read files
-                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'sudo chmod -R 755 ${TARGET_DIR}'"
+                        sh "ssh -o StrictHostKeyChecking=no ${DEPLOY_USER}@${SERVER_IP} 'chmod -R 755 ${TARGET_DIR}'"
                     }
                 }
             }
