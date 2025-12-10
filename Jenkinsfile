@@ -39,8 +39,19 @@ pipeline {
 
         stage('Build Frontend') {
             steps {
-                // Vite builds to 'dist/' by default
-                sh 'npm run build'
+                // 'file' binds the content of your secret file to the variable 'ENV_FILE_PATH'
+                withCredentials([file(credentialsId: '85057d61-e5aa-4475-a19d-a9dd11048106', variable: 'ENV_FILE_PATH')]) {
+                    script {
+                        // 1. Copy the secret file to ".env" so Vite can find it
+                        sh 'cp $ENV_FILE_PATH .env'
+                        
+                        // 2. Run the build (Vite automatically reads .env)
+                        sh 'npm run build'
+                        
+                        // 3. (Security) Delete the file immediately after building
+                        sh 'rm .env'
+                    }
+                }
             }
         }
 
