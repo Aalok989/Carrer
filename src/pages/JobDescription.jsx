@@ -50,6 +50,7 @@ export default function JobDescription() {
       
       if (jobData) {
         // Map API response to frontend structure
+        const reqs = toArray(jobData.requirements);
         const mappedJob = {
           id: jobData.id,
           title: jobData.job_type || "Not specified",
@@ -61,9 +62,7 @@ export default function JobDescription() {
           salary: jobData.salary || "Not specified", // Keep for backend to add later
           description: jobData.job_description || "No description available",
           fullDescription: jobData.full_description || jobData.job_description || "No detailed description available",
-          requirements: jobData.requirements || [
-            "Requirements will be updated soon"
-          ],
+          requirements: reqs.length ? reqs : ["Requirements will be updated soon"],
           tags: jobData.tags || ["Full Time"], // Keep for backend to add later
           logo: jobData.company_logo ? `https://api.etribes.mittalservices.com/${jobData.company_logo}` : null,
           companyDescription: jobData.company_description || `${jobData.company_name || 'This company'} is looking for talented individuals to join their team.`
@@ -102,6 +101,22 @@ export default function JobDescription() {
     } catch {
       return "Recently posted";
     }
+  };
+  
+  const toArray = (value) => {
+    if (Array.isArray(value)) return value;
+    if (typeof value === "string") {
+      return value
+        .split(/\r?\n|,|;|•|-/)
+        .map((s) => s.trim())
+        .filter(Boolean);
+    }
+    if (value && typeof value === "object") {
+      return Object.values(value)
+        .map((v) => (typeof v === "string" ? v.trim() : ""))
+        .filter(Boolean);
+    }
+    return [];
   };
 
   const loadSimilarJobs = async () => {
@@ -395,5 +410,3 @@ export default function JobDescription() {
 
 
 // The End
-
-
