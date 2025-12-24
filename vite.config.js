@@ -2,7 +2,7 @@ import { defineConfig } from 'vite';
 import react from '@vitejs/plugin-react';
 
 export default defineConfig({     // Hide internal Vite logs
-  base: '/carrer/',
+  base: '/career/',
   clearScreen: false,     // Prevent Vite from clearing console
 
   client: {
