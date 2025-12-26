@@ -12,7 +12,7 @@ import {
   FiUser
 } from "react-icons/fi";
 import { useNavigate } from "react-router-dom";
-import logo from "../assets/Etribe-logo.jpg";
+// import logo from "../assets/Etribe-logo.jpg";
 import api from "../api/axiosConfig";
 import { getAuthHeaders } from "../utils/apiHeaders";
 import { toast } from "react-toastify";
@@ -23,6 +23,7 @@ export default function JobList() {
   const [locationQuery, setLocationQuery] = useState("");
   const [viewMode, setViewMode] = useState("list"); // "list" or "grid"
   const [sortBy, setSortBy] = useState("newest");
+  const [headerLogo, setHeaderLogo] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [showUserMenu, setShowUserMenu] = useState(false);
   const [userData, setUserData] = useState(null);
@@ -249,6 +250,39 @@ export default function JobList() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
+  // Fetch dynamic logo
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const uid = localStorage.getItem('uid') || '1';
+        // Use the configured api instance which handles the proxy in dev and full URL in prod
+        const response = await api.post('/groupSettings/get_group_logo',
+          {}, // Empty body as per --data ''
+          {
+            headers: {
+              // These might be redundant if already in axiosConfig, but strictly following user's curl for safety
+              'Client-Service': 'COHAPPRT',
+              'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
+              'uid': uid,
+              'rurl': 'login.pftiindia.com',
+            }
+          }
+        );
+
+        if (response.data?.status && response.data?.data) {
+          // Construct full URL for the image
+          // Note: Images loaded via <img> tags don't suffer from CORS the same way API calls do
+          const logoPath = response.data.data;
+          setHeaderLogo(`https://api.etribes.mittalservices.com/${logoPath}`);
+        }
+      } catch (error) {
+        console.error("Error fetching group logo:", error);
+      }
+    };
+
+    fetchLogo();
+  }, []);
+
   const handleLogout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('uid');
@@ -355,8 +389,8 @@ export default function JobList() {
       <header className="bg-white border-b border-gray-200 w-full fixed top-0 left-0 right-0 z-50">
         <div className="w-full px-3 sm:px-4 py-1 sm:py-2">
           <div className="flex flex-col sm:flex-row items-center justify-between gap-3 sm:gap-4">
-            <div className="flex items-center gap-2">
-              <img src={logo} alt="ETRIBE" className="h-10 sm:h-14 md:h-16 w-auto object-contain" />
+            <div className="flex items-center gap-2 min-h-[40px] sm:min-h-[56px] md:min-h-[64px]">
+              {headerLogo && <img src={headerLogo} alt="ETRIBE" className="h-10 sm:h-14 md:h-16 w-auto object-contain" />}
             </div>
             <div className="flex items-center gap-2 sm:gap-3 w-full sm:w-auto">
               {!isLoggedIn ? (
