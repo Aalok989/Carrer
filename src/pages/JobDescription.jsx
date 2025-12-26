@@ -43,11 +43,11 @@ export default function JobDescription() {
       const response = await api.post('/JobPortal/list_jobs', {}, {
         headers: getAuthHeaders()
       });
-      
+
       // The API wraps the array in an object: { status: true, data: [...] }
       const apiJobs = Array.isArray(response.data?.data) ? response.data.data : [];
       const jobData = apiJobs.find(job => job.id === id || job.id === parseInt(id));
-      
+
       if (jobData) {
         // Map API response to frontend structure
         const reqs = toArray(jobData.requirements);
@@ -67,7 +67,7 @@ export default function JobDescription() {
           logo: jobData.company_logo ? `https://api.etribes.mittalservices.com/${jobData.company_logo}` : null,
           companyDescription: jobData.company_description || `${jobData.company_name || 'This company'} is looking for talented individuals to join their team.`
         };
-        
+
         setJob(mappedJob);
       } else {
         toast.error("Job not found");
@@ -81,7 +81,7 @@ export default function JobDescription() {
       setLoading(false);
     }
   };
-  
+
   // Helper function to format posted time
   const formatPostedTime = (dateString) => {
     try {
@@ -92,7 +92,7 @@ export default function JobDescription() {
       const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
       const diffInWeeks = Math.floor(diffInDays / 7);
       const diffInMonths = Math.floor(diffInDays / 30);
-      
+
       if (diffInHours < 1) return "Just now";
       if (diffInHours < 24) return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
       if (diffInDays < 7) return `${diffInDays} day${diffInDays > 1 ? 's' : ''} ago`;
@@ -102,7 +102,7 @@ export default function JobDescription() {
       return "Recently posted";
     }
   };
-  
+
   const toArray = (value) => {
     if (Array.isArray(value)) return value;
     if (typeof value === "string") {
@@ -125,7 +125,7 @@ export default function JobDescription() {
       const response = await api.post('/JobPortal/list_jobs', {}, {
         headers: getAuthHeaders()
       });
-      
+
       // The API wraps the array in an object: { status: true, data: [...] }
       const apiJobs = Array.isArray(response.data?.data) ? response.data.data : [];
       // Filter out current job and map to similar jobs structure
@@ -141,7 +141,7 @@ export default function JobDescription() {
           tags: job.tags || ["Full Time"],
           logo: job.company_logo ? `https://api.etribes.mittalservices.com/${job.company_logo}` : null
         }));
-      
+
       setSimilarJobs(similarJobsList);
     } catch (err) {
       console.error("Failed to load similar jobs:", err);
@@ -165,20 +165,20 @@ export default function JobDescription() {
       navigate("/login");
       return;
     }
-    
+
     try {
       // Show loading toast
       const loadingToast = toast.info("Submitting your application...", {
         autoClose: false
       });
-      
+
       const response = await api.post(`/JobApplicant/submit_application/${id}`, {}, {
         headers: getAuthHeaders()
       });
-      
+
       // Dismiss loading toast
       toast.dismiss(loadingToast);
-      
+
       if (response.data?.status === true || response.data?.success === true) {
         toast.success(response.data?.message || "Application submitted successfully!");
       } else {
@@ -237,11 +237,10 @@ export default function JobDescription() {
             <div className="flex items-center gap-2 sm:gap-3">
               <button
                 onClick={handleSaveJob}
-                className={`p-2 rounded-lg transition-colors ${
-                  isSaved
+                className={`p-2 rounded-lg transition-colors ${isSaved
                     ? "text-orange-500 bg-orange-50"
                     : "text-gray-600 hover:bg-gray-100"
-                }`}
+                  }`}
                 aria-label={isSaved ? "Unsave job" : "Save job"}
               >
                 <FiBookmark size={18} fill={isSaved ? "currentColor" : "none"} />
@@ -355,45 +354,45 @@ export default function JobDescription() {
               <div className="space-y-4 max-h-96 overflow-y-auto">
                 {similarJobs.length > 0 ? (
                   similarJobs.map((similarJob) => (
-                      <div
-                        key={similarJob.id}
-                        onClick={() => navigate(`/job/${similarJob.id}`)}
-                        className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
-                      >
-                        <div className="flex items-start justify-between gap-4">
-                          <div className="flex-1">
-                            <h4 className="text-sm font-semibold text-gray-900 mb-1">
-                              {similarJob.title}
-                            </h4>
-                            <p className="text-xs text-gray-600 mb-2">{similarJob.company}</p>
-                            <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
-                              <FiMapPin size={12} />
-                              <span>{similarJob.location}</span>
-                            </div>
-                            <div className="flex flex-wrap gap-2 mb-2">
-                              {similarJob.tags.slice(0, 2).map((tag, index) => (
-                                <span
-                                  key={index}
-                                  className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
-                                >
-                                  {tag}
-                                </span>
-                              ))}
-                            </div>
-                            <p className="text-xs text-gray-400">{similarJob.postedTime}</p>
+                    <div
+                      key={similarJob.id}
+                      onClick={() => navigate(`/job/${similarJob.id}`)}
+                      className="border border-gray-200 rounded-lg p-3 hover:border-blue-300 hover:bg-blue-50 transition-colors cursor-pointer"
+                    >
+                      <div className="flex items-start justify-between gap-4">
+                        <div className="flex-1">
+                          <h4 className="text-sm font-semibold text-gray-900 mb-1">
+                            {similarJob.title}
+                          </h4>
+                          <p className="text-xs text-gray-600 mb-2">{similarJob.company}</p>
+                          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                            <FiMapPin size={12} />
+                            <span>{similarJob.location}</span>
                           </div>
-                          {similarJob.logo && (
-                            <img
-                              src={similarJob.logo}
-                              alt={similarJob.company}
-                              className="w-10 h-10 object-contain rounded bg-gray-50 p-1 flex-shrink-0"
-                              onError={(e) => {
-                                e.target.style.display = 'none';
-                              }}
-                            />
-                          )}
+                          <div className="flex flex-wrap gap-2 mb-2">
+                            {similarJob.tags.slice(0, 2).map((tag, index) => (
+                              <span
+                                key={index}
+                                className="px-2 py-0.5 bg-gray-100 text-gray-600 text-xs rounded"
+                              >
+                                {tag}
+                              </span>
+                            ))}
+                          </div>
+                          <p className="text-xs text-gray-400">{similarJob.postedTime}</p>
                         </div>
+                        {similarJob.logo && (
+                          <img
+                            src={similarJob.logo}
+                            alt={similarJob.company}
+                            className="w-10 h-10 object-contain rounded bg-gray-50 p-1 flex-shrink-0"
+                            onError={(e) => {
+                              e.target.style.display = 'none';
+                            }}
+                          />
+                        )}
                       </div>
+                    </div>
                   ))
                 ) : (
                   <p className="text-sm text-gray-500 text-center py-4">No similar jobs found</p>

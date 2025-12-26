@@ -4,9 +4,32 @@
 
 body {
   font-family: 'Montserrat', sans-serif;
-  background-color: #f9fafb; /* Tailwind gray-50 */
-}
-.dark body {
-  background-color: #202123; /* Custom dark background */
+  background-color: #f9fafb;
+  /* Tailwind gray-50 */
 }
 
+.dark body {
+  background-color: #202123;
+  /* Custom dark background */
+}
+
+/* 3D Flip Animation Utilities */
+.perspective-1000 {
+  perspective: 1000px;
+}
+
+.transform-style-3d {
+  transform-style: preserve-3d;
+}
+
+.backface-hidden {
+  backface-visibility: hidden;
+}
+
+.rotate-y-180 {
+  transform: rotateY(180deg);
+}
+
+.rotate-y-180-back {
+  transform: rotateY(180deg);
+}

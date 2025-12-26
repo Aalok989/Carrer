@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import api from '../api/axiosConfig';
 import { getApiHeaders } from '../utils/apiHeaders';
-import logo from '../assets/Etribe-logo.jpg';
+// import logo from '../assets/Etribe-logo.jpg';
 import bgImage from '../assets/images/bg-login.jpg';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'react-toastify';
 import 'react-toastify/dist/ReactToastify.css';
 import { AiOutlineEye, AiOutlineEyeInvisible } from 'react-icons/ai';
+import { FiSmartphone, FiArrowLeft, FiLock, FiRefreshCw } from 'react-icons/fi';
 
 const Login = () => {
   const [isLogin, setIsLogin] = useState(true);
@@ -28,6 +29,17 @@ const Login = () => {
     resetConfirm: false,
   });
 
+  // OTP Login State
+  const [isOtpLogin, setIsOtpLogin] = useState(false);
+  const [otpStep, setOtpStep] = useState('send'); // 'send' or 'verify'
+  const [otpData, setOtpData] = useState({
+    phone: '',
+    otp: '',
+    verificationId: null // To store backend ID if returned
+  });
+  const [otpTimer, setOtpTimer] = useState(0);
+  const [otpLoading, setOtpLoading] = useState(false);
+
 
   const [regForm, setRegForm] = useState({
     name: '',
@@ -46,6 +58,35 @@ const Login = () => {
   const [states, setStates] = useState([]);
   const [loadingCountries, setLoadingCountries] = useState(false);
   const [loadingStates, setLoadingStates] = useState(false);
+  const [dynamicLogo, setDynamicLogo] = useState(null);
+
+  useEffect(() => {
+    const fetchLogo = async () => {
+      try {
+        const uid = localStorage.getItem('uid') || '1';
+        const response = await api.post('/groupSettings/get_group_logo',
+          {},
+          {
+            headers: {
+              'Client-Service': 'COHAPPRT',
+              'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
+              'uid': uid,
+              'rurl': 'login.pftiindia.com',
+            }
+          }
+        );
+
+        if (response.data?.status && response.data?.data) {
+          const logoPath = response.data.data;
+          setDynamicLogo(`https://api.etribes.mittalservices.com/${logoPath}`);
+        }
+      } catch (error) {
+        console.error("Error fetching group logo:", error);
+      }
+    };
+
+    fetchLogo();
+  }, []);
 
   // Fetch countries from API
   const fetchCountries = async () => {
@@ -54,18 +95,18 @@ const Login = () => {
       const response = await api.get('/common/countries', {
         headers: getApiHeaders()
       });
-      
+
       // Handle response: { status: true, data: [{ country: "India" }] }
       if (response.data?.status === true || response.data?.status === 'success') {
         const countriesData = response.data?.data || [];
         // Map the response to include id and name
         // Since API doesn't provide id, we'll use index + 1 as id and store country name
-        const mappedCountries = Array.isArray(countriesData) 
+        const mappedCountries = Array.isArray(countriesData)
           ? countriesData.map((country, index) => ({
-              id: country.id || country.country_id || (index + 1),
-              name: country.country || country.name || country.country_name || '',
-              originalData: country // Keep original data for reference
-            }))
+            id: country.id || country.country_id || (index + 1),
+            name: country.country || country.name || country.country_name || '',
+            originalData: country // Keep original data for reference
+          }))
           : [];
         setCountries(mappedCountries);
       } else {
@@ -88,11 +129,11 @@ const Login = () => {
     }
 
     // Find the country name from the selected country ID
-    const selectedCountry = countries.find(c => 
-      c.id === parseInt(countryId) || c.id === countryId || 
+    const selectedCountry = countries.find(c =>
+      c.id === parseInt(countryId) || c.id === countryId ||
       c.country_id === parseInt(countryId) || c.country_id === countryId
     );
-    
+
     if (!selectedCountry) {
       setStates([]);
       return;
@@ -107,21 +148,21 @@ const Login = () => {
       }, {
         headers: getApiHeaders()
       });
-      
+
       // Handle response: { status: true, data: [{ id: "1", country: "India", state: "Delhi", phone_code: "91" }] }
       if (response.data?.status === true || response.data?.status === 'success') {
         const statesData = response.data?.data || [];
         // Map the response to normalize the structure
-        const mappedStates = Array.isArray(statesData) 
+        const mappedStates = Array.isArray(statesData)
           ? statesData.map((state) => ({
-              id: parseInt(state.id) || state.id,
-              state_id: parseInt(state.id) || state.id,
-              area_id: parseInt(state.id) || state.id, // Use id as area_id
-              name: state.state || state.name || state.state_name || '',
-              country: state.country || countryName,
-              phone_code: state.phone_code || '',
-              originalData: state // Keep original data for reference
-            }))
+            id: parseInt(state.id) || state.id,
+            state_id: parseInt(state.id) || state.id,
+            area_id: parseInt(state.id) || state.id, // Use id as area_id
+            name: state.state || state.name || state.state_name || '',
+            country: state.country || countryName,
+            phone_code: state.phone_code || '',
+            originalData: state // Keep original data for reference
+          }))
           : [];
         setStates(mappedStates);
       } else {
@@ -148,39 +189,39 @@ const Login = () => {
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumbers = /\d/.test(password);
     const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-    
+
     if (password.length < minLength) return 'Password must be at least 8 characters long';
     if (!hasUpperCase) return 'Password must contain at least one uppercase letter';
     if (!hasLowerCase) return 'Password must contain at least one lowercase letter';
     if (!hasNumbers) return 'Password must contain at least one number';
     if (!hasSpecialChar) return 'Password must contain at least one special character';
-    
+
     return null;
   };
 
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
-    
+
     const email = (e.target.email.value || '').trim();
     const password = (e.target.password.value || '').trim();
-    
+
     // Basic validation
     if (!email || !password) {
       toast.error('Please enter both email and password.');
       setLoading(false);
       return;
     }
-    
+
     try {
       // Updated API endpoint for JobApplicant login
       const response = await api.post('/JobApplicant/login', { email, password }, {
         headers: getApiHeaders()
       });
-      
+
       // Handle malformed responses that might contain PHP errors mixed with JSON
       let data = response.data || {};
-      
+
       // If response is a string, try to extract JSON from it
       if (typeof data === 'string') {
         try {
@@ -203,23 +244,23 @@ const Login = () => {
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
-        
+
         // Extract user data
         const userData = data.data || data.user || {};
         const uidCandidate = userData.id ?? userData.user_id ?? data.user_id ?? data.id;
         if (uidCandidate) {
           localStorage.setItem('uid', String(uidCandidate));
         }
-        
+
         // Extract and save user name
         const userName = userData.name ?? userData.user_name ?? data.name ?? data.user_name;
         if (userName) {
           localStorage.setItem('userName', userName);
         }
-        
+
         toast.success('Login successful!');
         navigate('/joblist');
-        
+
         setTimeout(() => {
           window.dispatchEvent(new Event('login'));
         }, 50);
@@ -240,22 +281,22 @@ const Login = () => {
       // Handle cases where response might contain PHP errors but still have valid data
       if (respData && typeof respData === 'object' && respData.token) {
         localStorage.setItem('token', respData.token);
-        
+
         const userData = respData.data || respData.user || {};
         const uidCandidate = userData.id ?? userData.user_id ?? respData.user_id ?? respData.id;
         if (uidCandidate) {
           localStorage.setItem('uid', String(uidCandidate));
         }
-        
+
         // Extract and save user name
         const userName = userData.name ?? userData.user_name ?? respData.name ?? respData.user_name;
         if (userName) {
           localStorage.setItem('userName', userName);
         }
-        
+
         toast.success('Login successful!');
         navigate('/joblist');
-        
+
         setTimeout(() => {
           window.dispatchEvent(new Event('login'));
         }, 50);
@@ -298,25 +339,25 @@ const Login = () => {
     e.preventDefault();
     setRegError('');
     setLoading(true);
-    
+
     // Validation
     if (regForm.password !== regForm.confirmPassword) {
       setRegError('Passwords do not match');
       setLoading(false);
       return;
     }
-    
+
     const passwordError = validatePassword(regForm.password);
     if (passwordError) {
       setRegError(passwordError);
       setLoading(false);
       return;
     }
-    
+
     // Check if all required fields are filled
     const requiredFields = ['name', 'contact', 'email', 'password', 'country', 'state'];
     const missingFields = requiredFields.filter(field => !regForm[field]);
-    
+
     if (missingFields.length > 0) {
       setRegError(`Please fill in all required fields: ${missingFields.join(', ')}`);
       setLoading(false);
@@ -324,8 +365,8 @@ const Login = () => {
     }
 
     // Get area_id from selected state
-    const selectedState = getStatesForCountry().find(s => 
-      s.id === parseInt(regForm.state) || 
+    const selectedState = getStatesForCountry().find(s =>
+      s.id === parseInt(regForm.state) ||
       s.id === regForm.state ||
       s.state_id === parseInt(regForm.state) ||
       s.state_id === regForm.state
@@ -335,10 +376,10 @@ const Login = () => {
       setLoading(false);
       return;
     }
-    
+
     // Extract area_id - the state id is used as area_id
     const areaId = selectedState.area_id || selectedState.id || selectedState.state_id || regForm.state;
-    
+
     try {
       // Updated API endpoint and payload format for JobApplicant registration
       const registrationData = {
@@ -348,11 +389,11 @@ const Login = () => {
         contact: parseInt(regForm.contact, 10), // Convert to number
         area_id: parseInt(areaId, 10), // Use state id as area_id
       };
-      
+
       const response = await api.post('/JobApplicant/register', registrationData, {
         headers: getApiHeaders()
       });
-      
+
       // Handle response: API may return status: true or status: 'success'
       if (response.data?.status === true || response.data?.status === 'success' || response.data?.success) {
         toast.success('Registration successful! Please log in.');
@@ -381,15 +422,15 @@ const Login = () => {
 
   const handleRegChange = (e) => {
     const { name, value } = e.target;
-    
+
     // If country changes, reset state and fetch new states
     if (name === 'country') {
       setRegForm({ ...regForm, country: value, state: '' });
       fetchStates(value);
     } else {
-    setRegForm({ ...regForm, [name]: value });
+      setRegForm({ ...regForm, [name]: value });
     }
-    
+
     // Clear error when user starts typing
     if (regError) setRegError('');
   };
@@ -399,7 +440,7 @@ const Login = () => {
     // Remove dark theme classes from document
     document.documentElement.classList.remove('dark');
     document.body.classList.remove('dark');
-    
+
     // Also remove from any parent containers
     const containers = document.querySelectorAll('.dark');
     containers.forEach(container => {
@@ -415,6 +456,99 @@ const Login = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isLogin]);
 
+  // OTP Logic Handlers
+  const handleSendOtp = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!otpData.phone || otpData.phone.length < 10) {
+      toast.error('Please enter a valid phone number');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      // Mock API call - Replace with actual endpoint
+      // const response = await api.post('/common/send_otp', { phone_num: otpData.phone });
+
+      // Simulate success for now since API doesn't exist
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      toast.success(`OTP sent to ${otpData.phone}`);
+      setOtpStep('verify');
+      startOtpTimer();
+
+      // In real implementation:
+      // if (response.data.status === 'success') {
+      //    setOtpStep('verify');
+      //    setOtpData(prev => ({ ...prev, verificationId: response.data.verification_id }));
+      //    startOtpTimer();
+      // }
+    } catch (error) {
+      console.error('OTP Send Error:', error);
+      toast.error('Failed to send OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const handleVerifyOtp = async (e) => {
+    if (e) e.preventDefault();
+
+    if (!otpData.otp || otpData.otp.length < 6) {
+      toast.error('Please enter a valid OTP');
+      return;
+    }
+
+    setOtpLoading(true);
+    try {
+      // Mock API call - Replace with actual endpoint
+      // const response = await api.post('/common/verify_otp', { 
+      //   phone_num: otpData.phone, 
+      //   otp: otpData.otp,
+      //   verification_id: otpData.verificationId 
+      // });
+
+      // Simulate success
+      await new Promise(resolve => setTimeout(resolve, 1000));
+
+      // MOCK LOGIN SUCCESS LOGIC
+      // Ideally, the backend returns the same token structure as password login
+      // For now, we can't really log them in without a token
+
+      toast.success('OTP Verified! Logging in...');
+
+      // Placeholder for successful login action
+      // localStorage.setItem('token', 'mock_token');
+      // window.dispatchEvent(new Event('login'));
+      // navigate('/user/dashboard');
+
+      toast.warning('Backend integration required for actual login.');
+
+    } catch (error) {
+      console.error('OTP Verify Error:', error);
+      toast.error('Invalid OTP. Please try again.');
+    } finally {
+      setOtpLoading(false);
+    }
+  };
+
+  const startOtpTimer = () => {
+    setOtpTimer(30);
+    const timerInterval = setInterval(() => {
+      setOtpTimer((prev) => {
+        if (prev <= 1) {
+          clearInterval(timerInterval);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+  };
+
+  const handleResendOtp = async () => {
+    await handleSendOtp();
+  };
+
   // Use useEffect for navigation
   useEffect(() => {
     if (redirect) {
@@ -429,224 +563,338 @@ const Login = () => {
     >
       <div className="relative z-10 w-full max-w-md p-8 bg-white/95 rounded-2xl shadow-2xl">
         <div className="flex flex-col items-center mb-6">
-          <img src={logo} alt="Company Logo" className="h-20 mb-4 drop-shadow-xl rounded-full bg-white/80 p-2" />
+          {dynamicLogo && <img src={dynamicLogo} alt="Company Logo" className="h-20 mb-4 drop-shadow-xl rounded-full bg-white/80 p-2" />}
           <h2 className={`text-3xl font-extrabold tracking-tight mb-1 ${isLogin ? 'text-primary-dark' : 'text-green-700'}`}>{isLogin ? 'Welcome Back' : 'Create Account'}</h2>
           <p className="text-accent text-sm mb-2">{isLogin ? 'Sign in to your account' : 'Register to get started'}</p>
         </div>
-        {isLogin ? (
-          <form className="space-y-5" onSubmit={handleLogin}>
-            <div>
-              <label htmlFor="login-email" className="block text-primary-dark font-semibold mb-1">Email</label>
-              <input 
-                id="login-email"
-                name="email" 
-                type="email" 
-                required 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-primary-dark" 
-                placeholder="Enter your email"
-                aria-describedby="login-email-error"
-                style={{
-                  backgroundColor: 'white',
-                  borderColor: '#d1d5db',
-                  color: '#1e40af'
-                }}
-              />
-            </div>
-            <div>
-              <label htmlFor="login-password" className="block text-primary-dark font-semibold mb-1">Password</label>
-              <div className="relative">
-                <input 
-                  id="login-password"
-                  name="password" 
-                  type={passwordVisibility.login ? 'text' : 'password'} 
-                  required 
-                  className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-primary-dark pr-12" 
-                  placeholder="Enter your password"
-                  aria-describedby="login-password-error"
-                  style={{
-                    backgroundColor: 'white',
-                    borderColor: '#d1d5db',
-                    color: '#1e40af'
-                  }}
-                />
+
+        {/* Flip Container */}
+        <div className={`relative w-full transition-transform duration-700 transform-style-3d ${isOtpLogin ? 'rotate-y-180' : ''}`}>
+
+          {/* Front Face: Password Login */}
+          <div className="backface-hidden w-full bg-white relative">
+            {isLogin ? (
+              <div className="space-y-5">
+                <form className="space-y-5" onSubmit={handleLogin}>
+                  <div>
+                    <label htmlFor="login-email" className="block text-primary-dark font-semibold mb-1">Email</label>
+                    <input
+                      id="login-email"
+                      name="email"
+                      type="email"
+                      required
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-primary-dark"
+                      placeholder="Enter your email"
+                      aria-describedby="login-email-error"
+                      style={{
+                        backgroundColor: 'white',
+                        borderColor: '#d1d5db',
+                        color: '#1e40af'
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label htmlFor="login-password" className="block text-primary-dark font-semibold mb-1">Password</label>
+                    <div className="relative">
+                      <input
+                        id="login-password"
+                        name="password"
+                        type={passwordVisibility.login ? 'text' : 'password'}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary bg-white text-primary-dark pr-12"
+                        placeholder="Enter your password"
+                        aria-describedby="login-password-error"
+                        style={{
+                          backgroundColor: 'white',
+                          borderColor: '#d1d5db',
+                          color: '#1e40af'
+                        }}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('login')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-800"
+                        aria-label={passwordVisibility.login ? 'Hide password' : 'Show password'}
+                      >
+                        {passwordVisibility.login ? (
+                          <AiOutlineEyeInvisible className="h-5 w-5" />
+                        ) : (
+                          <AiOutlineEye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition disabled:opacity-50"
+                    disabled={loading}
+                    aria-describedby={loading ? "loading-status" : undefined}
+                  >
+                    {loading ? 'Logging in...' : 'Login'}
+                  </button>
+                  {loading && <div id="loading-status" className="sr-only">Loading...</div>}
+                </form>
+
+                <div className="relative flex py-2 items-center">
+                  <div className="flex-grow border-t border-gray-300"></div>
+                  <span className="flex-shrink-0 mx-4 text-gray-400 text-sm">OR</span>
+                  <div className="flex-grow border-t border-gray-300"></div>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => togglePasswordVisibility('login')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-blue-600 hover:text-blue-800"
-                  aria-label={passwordVisibility.login ? 'Hide password' : 'Show password'}
+                  onClick={() => setIsOtpLogin(true)}
+                  className="w-full bg-white border-2 border-blue-600 text-blue-600 py-2 rounded-lg font-bold shadow hover:bg-blue-50 transition flex items-center justify-center gap-2"
                 >
-                  {passwordVisibility.login ? (
-                    <AiOutlineEyeInvisible className="h-5 w-5" />
-                  ) : (
-                    <AiOutlineEye className="h-5 w-5" />
-                  )}
+                  <FiSmartphone className="h-5 w-5" />
+                  Login with OTP
                 </button>
               </div>
-            </div>
-            <button 
-              type="submit" 
-              className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition disabled:opacity-50" 
-              disabled={loading}
-              aria-describedby={loading ? "loading-status" : undefined}
-            >
-              {loading ? 'Logging in...' : 'Login'}
-            </button>
-            {loading && <div id="loading-status" className="sr-only">Loading...</div>}
-          </form>
-        ) : (
-          <form className="space-y-4" onSubmit={handleRegister}>
-            <div>
-              <label htmlFor="reg-name" className="block text-primary-dark font-semibold mb-1">Name</label>
-              <input 
-                id="reg-name"
-                name="name" 
-                value={regForm.name || ''} 
-                onChange={handleRegChange} 
-                required 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark" 
-                placeholder="Enter your name"
-                aria-describedby="reg-name-error"
-              />
-            </div>
-            <div>
-              <label htmlFor="reg-contact" className="block text-primary-dark font-semibold mb-1">Contact No</label>
-              <input 
-                id="reg-contact"
-                name="contact" 
-                value={regForm.contact || ''} 
-                onChange={handleRegChange} 
-                type="tel"
-                required 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark" 
-                placeholder="Enter your contact number"
-                aria-describedby="reg-contact-error"
-              />
-            </div>
-            <div>
-              <label htmlFor="reg-email" className="block text-primary-dark font-semibold mb-1">Email</label>
-              <input 
-                id="reg-email"
-                name="email" 
-                value={regForm.email || ''} 
-                onChange={handleRegChange} 
-                type="email" 
-                required 
-                className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 bg-white text-primary-dark" 
-                placeholder="Enter your email"
-                aria-describedby="reg-email-error"
-              />
-            </div>
-            <div className="flex gap-2">
-              <div className="w-1/2">
-                <label htmlFor="reg-password" className="block text-primary-dark font-semibold mb-1">Password</label>
-                <div className="relative">
-                  <input 
-                    id="reg-password"
-                    name="password" 
-                    value={regForm.password || ''} 
-                    onChange={handleRegChange} 
-                    type={passwordVisibility.register ? 'text' : 'password'} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark pr-12" 
-                    placeholder="Password"
-                    aria-describedby="reg-password-error"
+            ) : (
+              <form className="space-y-4" onSubmit={handleRegister}>
+                <div>
+                  <label htmlFor="reg-name" className="block text-primary-dark font-semibold mb-1">Name</label>
+                  <input
+                    id="reg-name"
+                    name="name"
+                    value={regForm.name || ''}
+                    onChange={handleRegChange}
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark"
+                    placeholder="Enter your name"
+                    aria-describedby="reg-name-error"
                   />
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('register')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-800"
-                    aria-label={passwordVisibility.register ? 'Hide password' : 'Show password'}
+                </div>
+                <div>
+                  <label htmlFor="reg-contact" className="block text-primary-dark font-semibold mb-1">Contact No</label>
+                  <input
+                    id="reg-contact"
+                    name="contact"
+                    value={regForm.contact || ''}
+                    onChange={handleRegChange}
+                    type="tel"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark"
+                    placeholder="Enter your contact number"
+                    aria-describedby="reg-contact-error"
+                  />
+                </div>
+                <div>
+                  <label htmlFor="reg-email" className="block text-primary-dark font-semibold mb-1">Email</label>
+                  <input
+                    id="reg-email"
+                    name="email"
+                    value={regForm.email || ''}
+                    onChange={handleRegChange}
+                    type="email"
+                    required
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-400 bg-white text-primary-dark"
+                    placeholder="Enter your email"
+                    aria-describedby="reg-email-error"
+                  />
+                </div>
+                <div className="flex gap-2">
+                  <div className="w-1/2">
+                    <label htmlFor="reg-password" className="block text-primary-dark font-semibold mb-1">Password</label>
+                    <div className="relative">
+                      <input
+                        id="reg-password"
+                        name="password"
+                        value={regForm.password || ''}
+                        onChange={handleRegChange}
+                        type={passwordVisibility.register ? 'text' : 'password'}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark pr-12"
+                        placeholder="Password"
+                        aria-describedby="reg-password-error"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('register')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-800"
+                        aria-label={passwordVisibility.register ? 'Hide password' : 'Show password'}
+                      >
+                        {passwordVisibility.register ? (
+                          <AiOutlineEyeInvisible className="h-5 w-5" />
+                        ) : (
+                          <AiOutlineEye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                  <div className="w-1/2">
+                    <label htmlFor="reg-confirm-password" className="block text-primary-dark font-semibold mb-1">Confirm Password</label>
+                    <div className="relative">
+                      <input
+                        id="reg-confirm-password"
+                        name="confirmPassword"
+                        value={regForm.confirmPassword || ''}
+                        onChange={handleRegChange}
+                        type={passwordVisibility.registerConfirm ? 'text' : 'password'}
+                        required
+                        className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark pr-12"
+                        placeholder="Confirm Password"
+                        aria-describedby="reg-confirm-password-error"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => togglePasswordVisibility('registerConfirm')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-800"
+                        aria-label={passwordVisibility.registerConfirm ? 'Hide password' : 'Show password'}
+                      >
+                        {passwordVisibility.registerConfirm ? (
+                          <AiOutlineEyeInvisible className="h-5 w-5" />
+                        ) : (
+                          <AiOutlineEye className="h-5 w-5" />
+                        )}
+                      </button>
+                    </div>
+                  </div>
+                </div>
+                <div>
+                  <label htmlFor="reg-country" className="block text-primary-dark font-semibold mb-1">Country</label>
+                  <select
+                    id="reg-country"
+                    name="country"
+                    value={regForm.country || ''}
+                    onChange={handleRegChange}
+                    required
+                    disabled={loadingCountries}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    aria-describedby="reg-country-error"
                   >
-                    {passwordVisibility.register ? (
-                      <AiOutlineEyeInvisible className="h-5 w-5" />
-                    ) : (
-                      <AiOutlineEye className="h-5 w-5" />
-                    )}
+                    <option value="">{loadingCountries ? 'Loading countries...' : 'Select Country'}</option>
+                    {countries.map((country) => (
+                      <option key={country.id || country.country_id} value={country.id || country.country_id}>
+                        {country.name || country.country || country.country_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label htmlFor="reg-state" className="block text-primary-dark font-semibold mb-1">State</label>
+                  <select
+                    id="reg-state"
+                    name="state"
+                    value={regForm.state || ''}
+                    onChange={handleRegChange}
+                    required
+                    disabled={!regForm.country || loadingStates}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark disabled:bg-gray-100 disabled:cursor-not-allowed"
+                    aria-describedby="reg-state-error"
+                  >
+                    <option value="">{loadingStates ? 'Loading states...' : 'Select State'}</option>
+                    {getStatesForCountry().map((state) => (
+                      <option key={state.id || state.state_id} value={state.id || state.state_id}>
+                        {state.name || state.state || state.state_name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+                {regError && <div id="reg-error" className="text-green-500 text-sm text-center" role="alert">{regError}</div>}
+                <button
+                  type="submit"
+                  className="w-full bg-green-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition disabled:opacity-50"
+                  disabled={loading}
+                  aria-describedby={loading ? "reg-loading-status" : undefined}
+                >
+                  {loading ? 'Registering...' : 'Register'}
+                </button>
+                {loading && <div id="reg-loading-status" className="sr-only">Loading...</div>}
+              </form>
+            )}
+          </div>
+
+          {/* Back Face: OTP Login */}
+          <div className="absolute top-0 left-0 w-full h-full backface-hidden rotate-y-180-back bg-white">
+            <h3 className="text-xl font-bold text-center text-primary-dark mb-4 flex items-center justify-center gap-2">
+              <FiSmartphone className="text-blue-600" />
+              OTP Login
+            </h3>
+
+            {otpStep === 'send' ? (
+              <div className="space-y-5">
+                <div>
+                  <label htmlFor="otp-phone" className="block text-primary-dark font-semibold mb-1">Phone Number</label>
+                  <input
+                    id="otp-phone"
+                    type="tel"
+                    value={otpData.phone}
+                    onChange={(e) => setOtpData({ ...otpData, phone: e.target.value })}
+                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-primary-dark"
+                    placeholder="Enter mobile number"
+                  />
+                </div>
+                <button
+                  onClick={handleSendOtp}
+                  disabled={otpLoading}
+                  className="w-full bg-blue-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-blue-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {otpLoading ? <FiRefreshCw className="animate-spin" /> : 'Send OTP'}
+                </button>
+              </div>
+            ) : (
+              <div className="space-y-5">
+                <div className="text-center text-sm text-gray-600 mb-2">
+                  Enter OTP sent to {otpData.phone}
+                </div>
+                <div>
+                  <label htmlFor="otp-input" className="block text-primary-dark font-semibold mb-1">Enter OTP</label>
+                  <div className="relative">
+                    <input
+                      id="otp-input"
+                      type="text"
+                      maxLength={6}
+                      value={otpData.otp}
+                      onChange={(e) => setOtpData({ ...otpData, otp: e.target.value })}
+                      className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-500 bg-white text-primary-dark tracking-widest text-center text-lg fw-bold"
+                      placeholder="• • • • • •"
+                    />
+                    <FiLock className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                  </div>
+                </div>
+                <button
+                  onClick={handleVerifyOtp}
+                  disabled={otpLoading}
+                  className="w-full bg-green-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
+                >
+                  {otpLoading ? <FiRefreshCw className="animate-spin" /> : 'Verify & Login'}
+                </button>
+
+                <div className="flex justify-between items-center text-sm mt-2">
+                  <button
+                    onClick={() => setOtpStep('send')}
+                    className="text-gray-500 hover:text-gray-700"
+                  >
+                    Change Number
                   </button>
+                  {otpTimer > 0 ? (
+                    <span className="text-gray-400">Resend in {otpTimer}s</span>
+                  ) : (
+                    <button
+                      onClick={handleResendOtp}
+                      className="text-blue-600 hover:text-blue-800 font-medium"
+                    >
+                      Resend OTP
+                    </button>
+                  )}
                 </div>
               </div>
-              <div className="w-1/2">
-                <label htmlFor="reg-confirm-password" className="block text-primary-dark font-semibold mb-1">Confirm Password</label>
-                <div className="relative">
-                  <input 
-                    id="reg-confirm-password"
-                    name="confirmPassword" 
-                    value={regForm.confirmPassword || ''} 
-                    onChange={handleRegChange} 
-                    type={passwordVisibility.registerConfirm ? 'text' : 'password'} 
-                    required 
-                    className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark pr-12" 
-                    placeholder="Confirm Password"
-                    aria-describedby="reg-confirm-password-error"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => togglePasswordVisibility('registerConfirm')}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-green-600 hover:text-green-800"
-                    aria-label={passwordVisibility.registerConfirm ? 'Hide password' : 'Show password'}
-                  >
-                    {passwordVisibility.registerConfirm ? (
-                      <AiOutlineEyeInvisible className="h-5 w-5" />
-                    ) : (
-                      <AiOutlineEye className="h-5 w-5" />
-                    )}
-                  </button>
-                </div>
-              </div>
-            </div>
-            <div>
-               <label htmlFor="reg-country" className="block text-primary-dark font-semibold mb-1">Country</label>
-               <select
-                 id="reg-country"
-                 name="country"
-                 value={regForm.country || ''}
-                 onChange={handleRegChange}
-                 required
-                 disabled={loadingCountries}
-                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark disabled:bg-gray-100 disabled:cursor-not-allowed"
-                 aria-describedby="reg-country-error"
-               >
-                 <option value="">{loadingCountries ? 'Loading countries...' : 'Select Country'}</option>
-                 {countries.map((country) => (
-                   <option key={country.id || country.country_id} value={country.id || country.country_id}>
-                     {country.name || country.country || country.country_name}
-                   </option>
-                 ))}
-               </select>
-             </div>
-             <div>
-               <label htmlFor="reg-state" className="block text-primary-dark font-semibold mb-1">State</label>
-               <select
-                 id="reg-state"
-                 name="state"
-                 value={regForm.state || ''}
-                onChange={handleRegChange} 
-                required 
-                 disabled={!regForm.country || loadingStates}
-                 className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-green-400 bg-white text-primary-dark disabled:bg-gray-100 disabled:cursor-not-allowed"
-                 aria-describedby="reg-state-error"
-               >
-                 <option value="">{loadingStates ? 'Loading states...' : 'Select State'}</option>
-                 {getStatesForCountry().map((state) => (
-                   <option key={state.id || state.state_id} value={state.id || state.state_id}>
-                     {state.name || state.state || state.state_name}
-                   </option>
-                 ))}
-               </select>
-            </div>
-            {regError && <div id="reg-error" className="text-green-500 text-sm text-center" role="alert">{regError}</div>}
-            <button 
-              type="submit" 
-              className="w-full bg-green-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition disabled:opacity-50"
-              disabled={loading}
-              aria-describedby={loading ? "reg-loading-status" : undefined}
+            )}
+
+            <button
+              onClick={() => setIsOtpLogin(false)}
+              className="mt-6 w-full text-gray-500 hover:text-gray-800 py-2 flex items-center justify-center gap-2 text-sm font-medium transition"
             >
-              {loading ? 'Registering...' : 'Register'}
+              <FiArrowLeft />
+              Back to Password Login
             </button>
-            {loading && <div id="reg-loading-status" className="sr-only">Loading...</div>}
-          </form>
-        )}
-        {isLogin ? (
+          </div>
+
+        </div>
+        {/* End of Flip Container */}
+
+        {isLogin && !isOtpLogin ? (
           <>
             <div className="mt-2 text-center">
               <span className="text-gray-600 text-sm">Don't have an account? </span>
@@ -655,14 +903,14 @@ const Login = () => {
               </button>
             </div>
           </>
-        ) : (
+        ) : !isOtpLogin ? (
           <div className="mt-2 text-center">
             <span className="text-gray-600 text-sm">Already have an account? </span>
             <button type="button" className="text-green-700 underline hover:text-primary text-sm" onClick={() => setIsLogin(true)}>
               Login
             </button>
           </div>
-        )}
+        ) : null}
         <div className="mt-8 text-xs text-gray-500 text-center">
           {isLogin ? (
             <>By logging in, you agree to our <a href="#" className=" text-blue-500 underline hover:text-primary">Terms & Conditions</a>.</>
@@ -674,7 +922,7 @@ const Login = () => {
           © {new Date().getFullYear()} ETribe. All rights reserved.
         </div>
       </div>
-    </div>
+    </div >
   );
 };
 
