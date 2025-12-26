@@ -467,25 +467,27 @@ const Login = () => {
 
     setOtpLoading(true);
     try {
-      // Mock API call - Replace with actual endpoint
-      // const response = await api.post('/common/send_otp', { phone_num: otpData.phone });
+      const response = await api.post('/JobApplicant/send_login_otp', {
+        phone: otpData.phone
+      }, {
+        headers: {
+          'Client-Service': 'COHAPPRT',
+          'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
+          'rurl': 'etribe.mittalservices.com',
+          'Content-Type': 'application/json'
+        }
+      });
 
-      // Simulate success for now since API doesn't exist
-      await new Promise(resolve => setTimeout(resolve, 1000));
-
-      toast.success(`OTP sent to ${otpData.phone}`);
-      setOtpStep('verify');
-      startOtpTimer();
-
-      // In real implementation:
-      // if (response.data.status === 'success') {
-      //    setOtpStep('verify');
-      //    setOtpData(prev => ({ ...prev, verificationId: response.data.verification_id }));
-      //    startOtpTimer();
-      // }
+      if (response.data.status) {
+        toast.success(response.data.message || `OTP sent to ${otpData.phone}`);
+        setOtpStep('verify');
+        startOtpTimer();
+      } else {
+        toast.error(response.data.message || 'Failed to send OTP.');
+      }
     } catch (error) {
       console.error('OTP Send Error:', error);
-      toast.error('Failed to send OTP. Please try again.');
+      toast.error(error.response?.data?.message || 'Failed to send OTP. Please try again.');
     } finally {
       setOtpLoading(false);
     }
@@ -501,32 +503,46 @@ const Login = () => {
 
     setOtpLoading(true);
     try {
-      // Mock API call - Replace with actual endpoint
-      // const response = await api.post('/common/verify_otp', { 
-      //   phone_num: otpData.phone, 
-      //   otp: otpData.otp,
-      //   verification_id: otpData.verificationId 
-      // });
+      const response = await api.post('/JobApplicant/verify_login_otp', {
+        phone: otpData.phone,
+        otp: otpData.otp
+      }, {
+        headers: {
+          'Client-Service': 'COHAPPRT',
+          'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
+          'rurl': 'etribe.mittalservices.com',
+          'Content-Type': 'application/json'
+        }
+      });
 
-      // Simulate success
-      await new Promise(resolve => setTimeout(resolve, 1000));
+      if (response.data.status) {
+        toast.success('Login Successful!');
 
-      // MOCK LOGIN SUCCESS LOGIC
-      // Ideally, the backend returns the same token structure as password login
-      // For now, we can't really log them in without a token
+        // Handle successful login - assuming standard token response structure
+        const { token, id, name } = response.data.data || {};
 
-      toast.success('OTP Verified! Logging in...');
+        if (token) {
+          localStorage.setItem('token', token);
+          localStorage.setItem('uid', id);
+          localStorage.setItem('name', name);
 
-      // Placeholder for successful login action
-      // localStorage.setItem('token', 'mock_token');
-      // window.dispatchEvent(new Event('login'));
-      // navigate('/user/dashboard');
+          // Dispatch login event
+          window.dispatchEvent(new Event('login'));
 
-      toast.warning('Backend integration required for actual login.');
+          navigate('/joblist');
+        } else {
+          // Fallback if structure is different
+          console.log("Login successful but no token found in structure:", response.data);
+          // Attempt to continue anyway
+          navigate('/joblist');
+        }
+      } else {
+        toast.error(response.data.message || 'Invalid OTP');
+      }
 
     } catch (error) {
       console.error('OTP Verify Error:', error);
-      toast.error('Invalid OTP. Please try again.');
+      toast.error(error.response?.data?.message || 'Invalid OTP. Please try again.');
     } finally {
       setOtpLoading(false);
     }
