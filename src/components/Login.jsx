@@ -68,10 +68,8 @@ const Login = () => {
           {},
           {
             headers: {
-              'Client-Service': 'COHAPPRT',
-              'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
+              ...getApiHeaders(),
               'uid': uid,
-              'rurl': 'login.pftiindia.com',
             }
           }
         );
@@ -97,7 +95,7 @@ const Login = () => {
       });
 
       // Handle response: { status: true, data: [{ country: "India" }] }
-      if (response.data?.status === true || response.data?.status === 'success') {
+      if (response.data?.status === true || response.data?.status === 'success' || response.data?.status === 200) {
         const countriesData = response.data?.data || [];
         // Map the response to include id and name
         // Since API doesn't provide id, we'll use index + 1 as id and store country name
@@ -150,7 +148,7 @@ const Login = () => {
       });
 
       // Handle response: { status: true, data: [{ id: "1", country: "India", state: "Delhi", phone_code: "91" }] }
-      if (response.data?.status === true || response.data?.status === 'success') {
+      if (response.data?.status === true || response.data?.status === 'success' || response.data?.status === 200) {
         const statesData = response.data?.data || [];
         // Map the response to normalize the structure
         const mappedStates = Array.isArray(statesData)
@@ -240,7 +238,7 @@ const Login = () => {
       }
 
       // Success path: token present
-      if (data?.token || data?.status === 'success') {
+      if (data?.token || data?.status === 'success' || data?.status === 200) {
         if (data.token) {
           localStorage.setItem('token', data.token);
         }
@@ -386,7 +384,7 @@ const Login = () => {
         name: regForm.name,
         email: regForm.email,
         password: regForm.password,
-        contact: parseInt(regForm.contact, 10), // Convert to number
+        phone: parseInt(regForm.contact, 10), // Convert to number - Backend expects 'phone'
         area_id: parseInt(areaId, 10), // Use state id as area_id
       };
 
@@ -395,7 +393,7 @@ const Login = () => {
       });
 
       // Handle response: API may return status: true or status: 'success'
-      if (response.data?.status === true || response.data?.status === 'success' || response.data?.success) {
+      if (response.data?.status === true || response.data?.status === 'success' || response.data?.success || response.data?.status === 200) {
         toast.success('Registration successful! Please log in.');
         setIsLogin(true); // Switch back to login form
         setRegForm({
@@ -470,12 +468,7 @@ const Login = () => {
       const response = await api.post('/JobApplicant/send_login_otp', {
         phone: otpData.phone
       }, {
-        headers: {
-          'Client-Service': 'COHAPPRT',
-          'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
-          'rurl': 'etribe.mittalservices.com',
-          'Content-Type': 'application/json'
-        }
+        headers: getApiHeaders()
       });
 
       if (response.data.status) {
@@ -494,9 +487,7 @@ const Login = () => {
   };
 
   const handleVerifyOtp = async (e) => {
-    if (e) e.preventDefault();
-
-    if (!otpData.otp || otpData.otp.length < 6) {
+    if (!otpData.otp || otpData.otp.length < 4) {
       toast.error('Please enter a valid OTP');
       return;
     }
@@ -507,12 +498,7 @@ const Login = () => {
         phone: otpData.phone,
         otp: otpData.otp
       }, {
-        headers: {
-          'Client-Service': 'COHAPPRT',
-          'Auth-Key': '4F21zrjoAASqz25690Zpqf67UyY',
-          'rurl': 'etribe.mittalservices.com',
-          'Content-Type': 'application/json'
-        }
+        headers: getApiHeaders()
       });
 
       if (response.data.status) {
@@ -870,6 +856,7 @@ const Login = () => {
                   </div>
                 </div>
                 <button
+                  type="button"
                   onClick={handleVerifyOtp}
                   disabled={otpLoading}
                   className="w-full bg-green-600 text-white py-2 rounded-lg font-bold shadow-lg hover:bg-green-700 transition disabled:opacity-50 flex items-center justify-center gap-2"
