@@ -504,16 +504,20 @@ const Login = () => {
       if (response.data.status) {
         toast.success('Login Successful!');
 
-        // Handle successful login - assuming standard token response structure
-        const { token, id, name } = response.data.data || {};
+        // Handle successful login
+        const responseData = response.data || {};
+        const token = responseData.token || (responseData.data && responseData.data.token);
+        const { id, name } = responseData.data || {};
 
         if (token) {
           localStorage.setItem('token', token);
           localStorage.setItem('uid', id);
-          localStorage.setItem('name', name);
+          localStorage.setItem('userName', name); // Set userName to match standard login
 
           // Dispatch login event
-          window.dispatchEvent(new Event('login'));
+          setTimeout(() => {
+            window.dispatchEvent(new Event('login'));
+          }, 50);
 
           navigate('/joblist');
         } else {
